@@ -7,12 +7,25 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <unordered_map>
+#include <ranges>
+#include <string_view>
+#include <vector>
+
+struct Request {
+  std::string method;
+  std::string path;
+  std::string http_version;
+  std::unordered_map<std::string, std::string> headers;
+};
 
 struct sockaddr_in server_addr;
 struct sockaddr_in client_addr;
 
 int create_server();
 int create_socket(int server_fd);
+
+void parseRequest(Request& request, std::string_view requestString);
 
 int main(int argc, char **argv) {
   // Flush after every std::cout / std::cerr
@@ -28,13 +41,39 @@ int main(int argc, char **argv) {
   if (socket_fd < 0) {
     return -1;
   }
+
+  char buffer[1024];
+  const int byteRead = read(socket_fd, buffer, 1024);
+  std::string requestString(buffer, byteRead);
+
+  Request request;
+  parseRequest(request, requestString);
+
+  std::cout << request.path << "\n";
+
+  std::string response = "HTTP/1.1 200 OK\r\n\r\n";
+  if (request.path != "/") {
+    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+  }
   
-  const std::string response = "HTTP/1.1 200 OK\r\n\r\n";
   write(socket_fd, response.data(), response.size());
   
   close(server_fd);
 
   return 0;
+}
+
+auto split_string(std::string_view text, std::string_view delimiter) {
+    return std::views::split(text, delimiter)
+         | std::ranges::to<std::vector<std::string>>();
+}
+
+void parseRequest(Request& request, std::string_view requestString) {
+  auto lines = split_string(requestString, "\r\n");
+  auto request_line_parts = split_string(lines[0], " ");
+  request.method = request_line_parts[0];
+  request.path = request_line_parts[1];
+  request.http_version = request_line_parts[2];
 }
 
 int create_server() {
