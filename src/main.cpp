@@ -19,6 +19,13 @@ struct Request {
   std::unordered_map<std::string, std::string> headers;
 };
 
+struct Response {
+  std::string http_version;
+  std::string status_code;
+  std::string status_msg;
+  std::unordered_map<std::string, std::string> headers;
+};
+
 struct sockaddr_in server_addr;
 struct sockaddr_in client_addr;
 
@@ -49,10 +56,16 @@ int main(int argc, char **argv) {
   Request request;
   parseRequest(request, requestString);
 
-  std::cout << request.path << "\n";
-
-  std::string response = "HTTP/1.1 200 OK\r\n\r\n";
-  if (request.path != "/") {
+  std::string response;
+  const std::string path = request.path;
+  if (path == "/") {
+    response = "HTTP/1.1 200 OK\r\n\r\n";
+  } else if (request.path.contains("/echo/")) {
+    const std::string s = "/echo/";
+    size_t index = path.find(s);
+    const std::string content = path.substr(index + s.size());
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+  } else {
     response = "HTTP/1.1 404 Not Found\r\n\r\n";
   }
   
