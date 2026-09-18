@@ -60,10 +60,13 @@ int main(int argc, char **argv) {
   const std::string path = request.path;
   if (path == "/") {
     response = "HTTP/1.1 200 OK\r\n\r\n";
-  } else if (request.path.contains("/echo/")) {
+  } else if (path.contains("/echo/")) {
     const std::string s = "/echo/";
     size_t index = path.find(s);
     const std::string content = path.substr(index + s.size());
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+  } else if (path.contains("/user-agent")) {
+    const std::string content = request.headers["User-Agent"];
     response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
   } else {
     response = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -87,6 +90,13 @@ void parseRequest(Request& request, std::string_view requestString) {
   request.method = request_line_parts[0];
   request.path = request_line_parts[1];
   request.http_version = request_line_parts[2];
+
+  for (int i = 1; i < lines.size(); i++) {
+    auto parts = split_string(lines[i], ": ");
+    if (parts.size() == 2) {
+      request.headers[parts[0]] = parts[1];
+    }
+  }
 }
 
 int create_server() {
