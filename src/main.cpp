@@ -11,6 +11,7 @@
 #include <ranges>
 #include <string_view>
 #include <vector>
+#include <thread>
 
 struct Request {
   std::string method;
@@ -31,8 +32,8 @@ struct sockaddr_in client_addr;
 
 int create_server();
 int create_socket(int server_fd);
-
 void parseRequest(Request& request, std::string_view requestString);
+void handle_client(int socket_fd);
 
 int main(int argc, char **argv) {
   // Flush after every std::cout / std::cerr
@@ -44,35 +45,15 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  const int socket_fd = create_socket(server_fd);
-  if (socket_fd < 0) {
-    return -1;
+  while (true) {
+    const int socket_fd = create_socket(server_fd);
+    if (socket_fd < 0) {
+      return -1;
+    }
+    
+    std::jthread client_thread(handle_client, socket_fd);
+    client_thread.detach();
   }
-
-  char buffer[1024];
-  const int byteRead = read(socket_fd, buffer, 1024);
-  std::string requestString(buffer, byteRead);
-
-  Request request;
-  parseRequest(request, requestString);
-
-  std::string response;
-  const std::string path = request.path;
-  if (path == "/") {
-    response = "HTTP/1.1 200 OK\r\n\r\n";
-  } else if (path.contains("/echo/")) {
-    const std::string s = "/echo/";
-    size_t index = path.find(s);
-    const std::string content = path.substr(index + s.size());
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
-  } else if (path.contains("/user-agent")) {
-    const std::string content = request.headers["User-Agent"];
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
-  } else {
-    response = "HTTP/1.1 404 Not Found\r\n\r\n";
-  }
-  
-  write(socket_fd, response.data(), response.size());
   
   close(server_fd);
 
@@ -97,6 +78,34 @@ void parseRequest(Request& request, std::string_view requestString) {
       request.headers[parts[0]] = parts[1];
     }
   }
+}
+
+void handle_client(int socket_fd) {
+  char buffer[1024];
+  const int byteRead = read(socket_fd, buffer, 1024);
+  std::string requestString(buffer, byteRead);
+
+  Request request;
+  parseRequest(request, requestString);
+
+  std::string response;
+  const std::string path = request.path;
+  if (path == "/") {
+    response = "HTTP/1.1 200 OK\r\n\r\n";
+  } else if (path.contains("/echo/")) {
+    const std::string s = "/echo/";
+    size_t index = path.find(s);
+    const std::string content = path.substr(index + s.size());
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+  } else if (path.contains("/user-agent")) {
+    const std::string content = request.headers["User-Agent"];
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+  } else {
+    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+  }
+  
+  write(socket_fd, response.data(), response.size());
+  close(socket_fd);
 }
 
 int create_server() {
