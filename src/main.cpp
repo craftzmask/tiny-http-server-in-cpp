@@ -1,17 +1,17 @@
-#include <iostream>
-#include <cstdlib>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 #include <netdb.h>
-#include <unordered_map>
 #include <ranges>
+#include <string>
 #include <string_view>
-#include <vector>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <thread>
+#include <unistd.h>
+#include <unordered_map>
+#include <vector>
 
 struct Request {
   std::string method;
@@ -32,7 +32,7 @@ struct sockaddr_in client_addr;
 
 int create_server();
 int create_socket(int server_fd);
-void parseRequest(Request& request, std::string_view requestString);
+void parseRequest(Request &request, std::string_view requestString);
 void handle_client(int socket_fd);
 
 int main(int argc, char **argv) {
@@ -50,22 +50,22 @@ int main(int argc, char **argv) {
     if (socket_fd < 0) {
       return -1;
     }
-    
+
     std::jthread client_thread(handle_client, socket_fd);
     client_thread.detach();
   }
-  
+
   close(server_fd);
 
   return 0;
 }
 
 auto split_string(std::string_view text, std::string_view delimiter) {
-    return std::views::split(text, delimiter)
-         | std::ranges::to<std::vector<std::string>>();
+  return std::views::split(text, delimiter) |
+         std::ranges::to<std::vector<std::string>>();
 }
 
-void parseRequest(Request& request, std::string_view requestString) {
+void parseRequest(Request &request, std::string_view requestString) {
   auto lines = split_string(requestString, "\r\n");
   auto request_line_parts = split_string(lines[0], " ");
   request.method = request_line_parts[0];
@@ -96,14 +96,18 @@ void handle_client(int socket_fd) {
     const std::string s = "/echo/";
     size_t index = path.find(s);
     const std::string content = path.substr(index + s.size());
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: "
+                           "text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                           content.size(), content);
   } else if (path.contains("/user-agent")) {
     const std::string content = request.headers["User-Agent"];
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", content.size(), content);
+    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: "
+                           "text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                           content.size(), content);
   } else {
     response = "HTTP/1.1 404 Not Found\r\n\r\n";
   }
-  
+
   write(socket_fd, response.data(), response.size());
   close(socket_fd);
 }
@@ -114,24 +118,26 @@ int create_server() {
     std::cerr << "Failed to create server socket\n";
     return -1;
   }
-  
+
   // Since the tester restarts your program quite often, setting SO_REUSEADDR
   // ensures that we don't run into 'Address already in use' errors
   const int reuse = 1;
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) <
+      0) {
     std::cerr << "setsockopt failed\n";
     return -1;
   }
-  
+
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(4221);
-  
-  if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
+
+  if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) !=
+      0) {
     std::cerr << "Failed to bind to port 4221\n";
     return -1;
   }
-  
+
   const int connection_backlog = 5;
   if (listen(server_fd, connection_backlog) != 0) {
     std::cerr << "listen failed\n";
@@ -144,10 +150,11 @@ int create_server() {
 int create_socket(int server_fd) {
   struct sockaddr_in client_addr;
   const int client_addr_len = sizeof(client_addr);
-  
+
   std::cout << "Waiting for a client to connect...\n";
-  
-  const int socket_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+
+  const int socket_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+                               (socklen_t *)&client_addr_len);
   if (socket_fd < 0) {
     std::cerr << "Failed to create client socket\n";
     return -1;
