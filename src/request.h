@@ -9,4 +9,4 @@ struct Request {
   std::unordered_map<std::string, std::string> headers;
 };
 
-void parseRequest(Request &request, std::string_view requestString);
+void parseRequest(Request &request, std::string_view request_string);
