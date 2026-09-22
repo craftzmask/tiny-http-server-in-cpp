@@ -1,30 +1,22 @@
 #include "request.h"
+#include "response.h"
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <netdb.h>
 #include <string>
-#include <string_view>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
 #include <unordered_map>
 
-struct Response {
-  std::string http_version;
-  std::string status_code;
-  std::string status_msg;
-  std::unordered_map<std::string, std::string> headers;
-};
-
 struct sockaddr_in server_addr;
 struct sockaddr_in client_addr;
 
 int create_server();
 int create_socket(int server_fd);
-void parseRequest(Request &request, std::string_view requestString);
 void handle_client(int socket_fd);
 
 int main(int argc, char **argv) {
