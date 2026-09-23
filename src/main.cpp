@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <sys/socket.h>
+#include <unistd.h>
 
 void handle_client(int socket_fd);
 
