@@ -36,32 +36,31 @@ int main(int argc, char **argv) {
 
 void handle_client(int socket_fd) {
   char buffer[1024];
-  const int byteRead = read(socket_fd, buffer, 1024);
-  std::string request_string(buffer, byteRead);
+  const int byte_read = read(socket_fd, buffer, 1024);
+  std::string request_string(buffer, byte_read);
 
   Request request;
   parseRequest(request, request_string);
 
-  std::string response;
+  Response response;
+  response.socket_fd = socket_fd;
+
   const std::string path = request.path;
   if (path == "/") {
-    response = "HTTP/1.1 200 OK\r\n\r\n";
+    response.send();
   } else if (path.contains("/echo/")) {
     const std::string s = "/echo/";
     size_t index = path.find(s);
     const std::string content = path.substr(index + s.size());
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: "
-                           "text/plain\r\nContent-Length: {}\r\n\r\n{}",
-                           content.size(), content);
+    response.send(content);
   } else if (path.contains("/user-agent")) {
     const std::string content = request.headers["User-Agent"];
-    response = std::format("HTTP/1.1 200 OK\r\nContent-Type: "
-                           "text/plain\r\nContent-Length: {}\r\n\r\n{}",
-                           content.size(), content);
+    response.send(content);
   } else {
-    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+    response.status_code = "404";
+    response.status_msg = "Not Found";
+    response.send();
   }
 
-  write(socket_fd, response.data(), response.size());
   close(socket_fd);
 }

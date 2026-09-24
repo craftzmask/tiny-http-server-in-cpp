@@ -10,8 +10,8 @@ auto split_string(std::string_view text, std::string_view delimiter) {
          std::ranges::to<std::vector<std::string>>();
 }
 
-void parseRequest(Request &request, std::string_view requestString) {
-  auto lines = split_string(requestString, "\r\n");
+void parseRequest(Request &request, std::string_view request_string) {
+  auto lines = split_string(request_string, "\r\n");
   auto request_line_parts = split_string(lines[0], " ");
   request.method = request_line_parts[0];
   request.path = request_line_parts[1];
