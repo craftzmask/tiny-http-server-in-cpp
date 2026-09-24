@@ -15,9 +15,9 @@ struct Response {
     return std::format("{} {} {}\r\n\r\n", http_version, status_code, status_msg);
   }
 
-  std::string to_string(const std::string& content) {
-    return std::format("{} {} {}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
-                           http_version, status_code, status_msg, content.size(), content);
+  std::string to_string(const std::string& content, const std::string& content_type = "text/plain") {
+    return std::format("{} {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
+                           http_version, status_code, status_msg, content_type, content.size(), content);
   }
 
   void send() {
@@ -25,8 +25,8 @@ struct Response {
     write(socket_fd, s.data(), s.size());
   }
 
-  void send(const std::string& content) {
-    const std::string s = to_string(content);
+  void send(const std::string& content, const std::string& content_type = "text/plain") {
+    const std::string s = to_string(content, content_type);
     write(socket_fd, s.data(), s.size());
   }
 };
