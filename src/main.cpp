@@ -60,10 +60,7 @@ void handle_client(int socket_fd, const fs::path& dir_path) {
   if (path == "/") {
     response.send();
   } else if (path.contains("/echo/")) {
-    const std::string s = "/echo/";
-    size_t index = path.find(s);
-    const std::string content = path.substr(index + s.size());
-    response.send(content);
+    response.send(request.get_echo());
   } else if (path.contains("/user-agent")) {
     const std::string content = request.headers["User-Agent"];
     response.send(content);
